@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Toko Master</title>
+
+<style>
+*{
+  margin:0;padding:0;box-sizing:border-box;
+  font-family:sans-serif;
+  -webkit-tap-highlight-color:transparent;
+}
+
+body{background:#f5f5f7;}
+
+/* NAV */
+.nav{
+  background:white;
+  padding:15px;
+  display:flex;
+  justify-content:space-between;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* AUTH */
+.auth{
+  max-width:320px;
+  margin:60px auto;
+  background:white;
+  padding:25px;
+  border-radius:15px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
+  text-align:center;
+}
+
+.auth input{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border:none;
+  background:#f0f0f0;
+  border-radius:10px;
+}
+
+button{
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  background:black;
+  color:white;
+  cursor:pointer;
+}
+
+/* APP */
+#app{display:none;padding-bottom:80px;}
+
+/* SEARCH */
+.search{padding:15px;}
+.search input{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:white;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* CATEGORY */
+.category-top,.category-bottom{
+  display:flex;
+  gap:10px;
+  padding:10px 15px;
+  overflow:auto;
+}
+
+.cat,.cat2{
+  padding:8px 15px;
+  border-radius:20px;
+  background:white;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.cat.active,.cat2.active{
+  background:black;
+  color:white;
+}
+
+/* PRODUCTS */
+.container{
+  padding:15px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:15px;
+}
+
+.card{
+  background:white;
+  padding:10px;
+  border-radius:12px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+  cursor:pointer;
+}
+
+.card img{width:100%;border-radius:10px;}
+
+/* DETAIL */
+.detail{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:white;
+  z-index:1000;
+  transform:translateX(100%);
+  transition:.3s;
+  padding:20px;
+}
+
+.detail.active{transform:translateX(0);}
+
+/* CART */
+.cart-page{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:white;
+  transform:translateX(100%);
+  transition:.3s;
+  padding:20px;
+}
+
+.cart-page.active{transform:translateX(0);}
+
+/* SEARCH PAGE */
+.search-page{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:white;
+  transform:translateY(100%);
+  transition:.3s;
+  padding:20px;
+}
+
+.search-page.active{transform:translateY(0);}
+
+/* BOTTOM NAV */
+.bottom-nav{
+  position:fixed;
+  bottom:0;width:100%;
+  display:flex;
+  justify-content:space-around;
+  background:white;
+  padding:10px;
+}
+
+/* TOAST */
+.toast{
+  position:fixed;
+  bottom:90px;
+  right:20px;
+  background:white;
+  padding:10px 20px;
+  border-radius:10px;
+  box-shadow:0 5px 20px rgba(0,0,0,0.2);
+  opacity:0;
+  transition:.3s;
+}
+.toast.show{opacity:1;}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+  <div>🛒 Toko Master</div>
+  <div id="userText">Belum login</div>
+</div>
+
+<div class="auth" id="authBox">
+  <input id="username" placeholder="Username">
+  <input id="password" type="password" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <button onclick="register()">Register</button>
+</div>
+
+<div id="app">
+
+  <div class="search">
+    <input id="search" placeholder="Cari produk..." readonly onclick="openSearch()">
+  </div>
+
+  <div class="category-top">
+    <div class="cat active" onclick="setCat(event,'all')">Semua</div>
+    <div class="cat" onclick="setCat(event,'gaming')">Gaming</div>
+    <div class="cat" onclick="setCat(event,'office')">Office</div>
+  </div>
+
+  <div class="category-bottom">
+    <div class="cat2 active" onclick="setFilter(event,'all')">Semua</div>
+    <div class="cat2" onclick="setFilter(event,'popular')">Populer</div>
+    <div class="cat2" onclick="setFilter(event,'cheap')">Murah</div>
+  </div>
+
+  <div class="container" id="products"></div>
+
+</div>
+
+<!-- DETAIL -->
+<div id="detail" class="detail"></div>
+
+<!-- CART -->
+<div id="cartPage" class="cart-page"></div>
+
+<!-- SEARCH -->
+<div id="searchPage" class="search-page">
+  <input id="searchInput" placeholder="Cari..." oninput="liveSearch()">
+  <div id="searchResult"></div>
+</div>
+
+<div class="bottom-nav">
+  <div onclick="goHome()">Home</div>
+  <div onclick="openCart()">Cart</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let productsData=[];
+let cart=[];
+let cat="all",filter="all";
+
+// DATA
+for(let i=1;i<=30;i++){
+  productsData.push({
+    id:i,
+    name:"Produk "+i,
+    price:Math.floor(Math.random()*500000),
+    cat:["gaming","office"][i%2]
+  });
+}
+
+// LOGIN
+function login(){
+  if(localStorage.getItem(username.value)===password.value){
+    localStorage.setItem("loginUser",username.value);
+    startApp();
+  } else showToast("Login gagal");
+}
+
+function register(){
+  localStorage.setItem(username.value,password.value);
+  showToast("Register berhasil");
+}
+
+function startApp(){
+  authBox.style.display="none";
+  app.style.display="block";
+  render();
+}
+
+// RENDER
+function render(){
+  products.innerHTML="";
+  productsData.forEach(p=>{
+    products.innerHTML+=`
+    <div class="card" onclick="openDetail(${p.id})">
+      <img src="https://picsum.photos/200?${p.id}">
+      <h4>${p.name}</h4>
+      <p>Rp ${p.price}</p>
+    </div>`;
+  });
+}
+
+// DETAIL
+function openDetail(id){
+  let p=productsData.find(x=>x.id==id);
+  detail.innerHTML=`
+    <h2>${p.name}</h2>
+    <p>Rp ${p.price}</p>
+    <button onclick="addCart(${p.id})">Tambah ke cart</button>
+    <button onclick="closeDetail()">Kembali</button>
+  `;
+  detail.classList.add("active");
+}
+
+function closeDetail(){
+  detail.classList.remove("active");
+}
+
+// CART
+function addCart(id){
+  cart.push(productsData.find(p=>p.id==id));
+  showToast("Ditambahkan");
+}
+
+function openCart(){
+  cartPage.innerHTML="<h2>Cart</h2>";
+  let total=0;
+
+  cart.forEach((p,i)=>{
+    total+=p.price;
+    cartPage.innerHTML+=`
+      <div>${p.name} - Rp ${p.price}
+      <button onclick="removeCart(${i})">Hapus</button></div>`;
+  });
+
+  cartPage.innerHTML+=`<h3>Total: Rp ${total}</h3>
+  <button onclick="closeCart()">Kembali</button>`;
+
+  cartPage.classList.add("active");
+}
+
+function removeCart(i){
+  cart.splice(i,1);
+  openCart();
+}
+
+function closeCart(){
+  cartPage.classList.remove("active");
+}
+
+// SEARCH
+function openSearch(){searchPage.classList.add("active");}
+function liveSearch(){
+  let key=searchInput.value.toLowerCase();
+  searchResult.innerHTML="";
+  productsData.filter(p=>p.name.toLowerCase().includes(key))
+  .forEach(p=>{
+    searchResult.innerHTML+=`
+    <div onclick="openDetail(${p.id})">${p.name}</div>`;
+  });
+}
+
+// NAV
+function goHome(){
+  cartPage.classList.remove("active");
+  detail.classList.remove("active");
+  searchPage.classList.remove("active");
+}
+
+// TOAST
+function showToast(msg){
+  toast.innerText=msg;
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),2000);
+}
+
+if(localStorage.getItem("loginUser")) startApp();
+</script>
+
+</body>
+</html>
